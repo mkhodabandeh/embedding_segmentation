@@ -7,7 +7,7 @@ def run_command(cmd):
     os.system(cmd)
     return cmd
 
-machine = 'cs-vml-31'
+machine = 'cs-vml-29'
 parameters = {
         '-v': ['belly_dancing'],
         '-b': [64, 256,128, ],
@@ -15,9 +15,11 @@ parameters = {
         '-A': [4, 8, 12],
         '-S': [200, 400, 500, 800, 1500, 2000],
         '-o': [64, 128, 256],
+        '-l': [3]
         }
 
 log_path = '/cs/vml2/mkhodaba/cvpr16/logs/{}/'.format(machine)
+os.system('mkdir {} -p'.format(log_path))
 proj_path = '/cs/vml3/mkhodaba/cvpr16/code/embedding_segmentation/python/'
 def dfs(i, params_list, cmd, processes):
     if i == len(params_list):
@@ -47,7 +49,7 @@ def main():
     for cmd in processes_list:
         run_command(cmd)
 
-    start = 53 
+    start = 5 
     for i in xrange(len(params_list)):
         os.system('python '+proj_path+'/run_khoreva.py '+str(start+i))
 
