@@ -33,16 +33,21 @@ def createVSB100Database(data, db_settings, logger):
     features = np.concatenate(features, axis=1)
     #TODO: if voxel_labels is not there produce it
     #TODO: if pixel_labels is not there produce it
-
+    basic_similarities = data['HOF'].dot(data['HOF'].T)
+    #basic_similarities = features.dot(features.T)
     number_of_voxels = colors.shape[0]
     n = number_of_voxels * negative_numbers
     database_negative_indices = np.zeros((number_of_voxels, negative_numbers), dtype=np.int32)
     database_neighbor_indices = np.zeros((number_of_voxels, k), dtype=np.int32)
     kdtree = cKDTree(centers.tolist())
     for i in xrange(number_of_voxels):
-        neighbors_all = kdtree.query(centers[i], 15*k)[1][1:]
+        neighbors_all = kdtree.query(centers[i], 25)[1][1:]
+        weights = basic_similarities[i, neighbors_all]
+        arg_weights = np.argsort(np.array(weights)).tolist()
+        neighbors_all = neighbors_all[arg_weights][::-1]
         neighbors = neighbors_all[:k]
-        negatives = getNegatives(negative_selector_method, negative_selector_param, neighbors_all, negative_numbers, k)
+        negatives = neighbors_all[-negative_numbers:]
+        #negatives = getNegatives(negative_selector_method, negative_selector_param, neighbors_all, negative_numbers, k)
         database_negative_indices[i][...] = negatives
         database_neighbor_indices[i][...] = neighbors
     from scipy.io import savemat 

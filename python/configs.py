@@ -51,7 +51,7 @@ class Config:
 
         self.model = {
             'batch_size':    	128,
-            'number_of_neighbors':    12, #number of neighbors around the target superpixel
+            'number_of_neighbors':    10, #number of neighbors around the target superpixel
             'number_of_negatives':  4,
             'negative_selector_method': 'close',
             'negative_selector_param': 1*8,

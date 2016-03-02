@@ -105,7 +105,7 @@ def setup_experiment(extract_features=False, visualization=False, comment=None, 
             config.db_settings['compute_segment'] = False
         if not os.path.exists(out_path):
             print 'labels are not there. Computing labelledlevelvideo_pixels'
-            labelledlevelvideo_generator(config)
+            # labelledlevelvideo_generator(config)
         createDatabase(config.db, config.db_settings, logger)
         #TODO create the database list
         #TODO: probably in configs need to set how to merge them: for now separately
@@ -117,7 +117,7 @@ def setup_experiment(extract_features=False, visualization=False, comment=None, 
     logger.close()
     if not os.path.exists(out_path):
         print 'labels are not there'
-        labelledlevelvideo_generator(config)
+        # labelledlevelvideo_generator(config)
    #TODO save configs
     config.save()
 
