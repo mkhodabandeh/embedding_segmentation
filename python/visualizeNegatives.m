@@ -1,9 +1,10 @@
-function visualizeSimilars(sup, exp_num)
+function visualizeSimilars(sup, exp_num, name)
     
+    name
     exp_num = num2str(exp_num);
     folder_name = ['/cs/vml2/mkhodaba/eccv16/visualization/', exp_num,'-',num2str(sup), '-neg'];
     %load('/cs/vml3/mkhodaba/cvpr16/Graph_construction/Features/vw_commercial_vidinfo.mat')
-    load('/cs/vml2/mkhodaba/datasets/VSB100/files/belly_dancing/voxellabelledlevelvideo_08.mat');
+    load(['/cs/vml2/mkhodaba/datasets/VSB100/files/', name, '/voxellabelledlevelvideo_08.mat']);
     %load('/cs/vml3/mkhodaba/cvpr16/Graph_construction/Features/STM_similarities.mat')
     %load('/cs/vml3/mkhodaba/cvpr16/Graph_construction/Features/anna_color_similarities.mat')
     %exp_root = '/cs/vml2/mkhodaba/cvpr16/expriments/';
@@ -44,7 +45,7 @@ function visualizeSimilars(sup, exp_num)
     height = size(seg10,1)
     width = size(seg10, 2)
     
-    for frame = 1:50
+    for frame = 1:size(labelledlevelvideo,3)
         current_frame_label=labelledlevelvideo(:,:,frame);
         %size(seg10)
         %type(labelledlevelvideo)
