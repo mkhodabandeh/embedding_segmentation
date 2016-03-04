@@ -131,6 +131,7 @@ class Segmentation(object):
         voxel_colors = img.getcolors()
         if optical_flow_path is not None:
             optical_flow_img = MyImage(optical_flow_path)
+            # optical_flow_img =  
         if fcn_path is not None:
             fcn_file = np.load(fcn_path)['hsv'].transpose(1, 2, 0).astype('float32')
         #print "Colors"

@@ -28,11 +28,12 @@ if __name__ == '__main__':
     v = argv.index('-v')
     vidname = argv[v+1]
     print vidname
-    if '-a' in argv:
-        vpr, bpr, name = getall(vidname)
-    else:
-        vpr, bpr, name = getmax(vidname)
     try:
+        if '-a' in argv:
+            vpr, bpr, name = getall(vidname)
+        else:
+            vpr, bpr, name = getmax(vidname)
+
         if vpr is not None:
             for i in xrange(len(vpr)):
                 print 'BPR:{0:.2f}\nVPR:{1:.2f}\n{2}\n'.format(bpr[i], vpr[i], name[i])

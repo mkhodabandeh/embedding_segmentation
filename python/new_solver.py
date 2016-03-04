@@ -151,7 +151,7 @@ if __name__ == '__main__':
     print "--------------------------------------"
     print "Configs for experiment:",conf.experiment_number
     print "--------------------------------------max_iter:", max_iter
-    while it < max_iter/2:
+    while it < 60000:
     	it += 1
     	solver.step(1)  # SGD by Caffe
     	train_loss= np.append(train_loss, solver.net.blobs['loss'].data)
