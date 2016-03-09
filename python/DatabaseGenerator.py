@@ -50,6 +50,7 @@ def createJHMDBParallel(db_settings, logger):
     feature_type = db_settings['feature_type']
     labelledlevelvideo_path = db_settings['voxellabelledlevelvideo_path']
     optical_flow_path = db_settings['optical_flow_path']
+    adjacency_path = db_settings['adjacency_path']
     output_path = db_settings['output_path']
     print 'output_path is:',output_path
     compute_segment = db_settings['compute_segment']
@@ -76,10 +77,12 @@ def createJHMDBParallel(db_settings, logger):
                                     None,
                                     labelledlevelvideo_path.format(action_name=action, video_name=video, level=level),
                                     optical_flow_path.format(action_name=action, video_name=video, level=level)+frame_format,
+                                    # optical_flow_path.format(action_name=action, video_name=video, level=level)+'image{0:03d}.png.mat',
                                     negative_neighbors=n_neg,
                                     fcn_path=fcn_path.format(action_name=action, video_name=video, level=level)+frame_format,
                                     output_path=output_path)
                     segmentor.setFeatureType(feature_type)
+                    segmentor.adjacency_path = adjacency_path.format(action_name=action, level=level)
                     segmentor_list.append((i, segmentor))
                     # segmentor_list.append((i, MySegmentation(orig_path.format(d)+frame_format, seg_path.format(d,level)+frame_format, annotator)))
                 # parallelProcess = lambda pair: pair[1].processNewFrame(pair[0]) #pair = (frame_number, segment)
@@ -87,11 +90,12 @@ def createJHMDBParallel(db_settings, logger):
                 s = time.time()
                 print 'parallelizing begins', 'Elapsed time:', time.time()-s
                 parallel = True
+                # parallel = False 
                 if parallel:
                     from multiprocessing import Pool
                     print 'create pool'
                     #this is the real one
-                    pool = Pool(8)
+                    pool = Pool()
                     print 'defining function'
                     parallelized_segmentor_list = pool.map(parallelProcess, segmentor_list)
                     pool.close()

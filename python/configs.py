@@ -51,11 +51,11 @@ class Config:
 
         self.model = {
             'batch_size':    	128,
-            'number_of_neighbors':    12, #number of neighbors around the target superpixel
-            'number_of_negatives':  4,
+            'number_of_neighbors':    4, #number of neighbors around the target superpixel
+            'number_of_negatives':  1,
             'negative_selector_method': 'close',
-            'negative_selector_param':4*8,
-            'inner_product_output':   128, #2*(3*256+192),
+            'negative_selector_param':20,
+            'inner_product_output':   10, #2*(3*256+192),
             'inner_product_output_duplicate':   64, #2*(3*256+192),
             'weight_lr_mult':    1,
             'weight_decay_mult':    1,
@@ -90,7 +90,7 @@ class Config:
             'net':    		self.model['test_prototxt_path'],
             '_train_net':    	self.model['model_prototxt_path'],
             '_test_nets':    	self.model['test_prototxt_path'],
-            'max_iter':    	30000,
+            'max_iter':    	12000,
             '_train_interval':    500,
             '_termination_threshold':0.0004,
             '_solver_prototxt_path':    self.experiments_path+'/solver.prototxt',
@@ -135,11 +135,14 @@ class Config:
             # 'segmented_path':    	'/cs/vml2/mkhodaba/datasets/VSB100/segmented_frames_larger/{action_name}/{level:02d}/',  #+frame_format,
             'segmented_path':    	'/local-scratch/segmented_frames/{action_name}/{level:02d}/',  #+frame_format,
             'optical_flow_path':    	'/cs/vml2/mkhodaba/datasets/VSB100/Test_flow/{action_name}/',
-            'fcn_path':                 '/cs/vml2/smuralid/projects/eccv16/python/preprocessing/fcn/Test/{action_name}/',
+            # 'optical_flow_path':    	'/cs/vml2/smuralid/projects/eccv16/python/preprocessing/Test_LDOF/{action_name}/',
+            # 'fcn_path':                 '/cs/vml2/smuralid/projects/eccv16/python/preprocessing/fcn/Test/{action_name}/',
+            'fcn_path':                 '/cs/vml1/users/mkhodaba/fcn/{action_name}/',
             #'features_path':     '/cs/vml2/mkhodaba/cvpr16/datasets/JHMDB/features/{action_name}/{video_name}/features.txt',
             'output_path':          self.experiments_path + 'indices.mat',#+frame_format
             #'features_path':     	'/cs/vml2/smuralid/projects/eccv16/datasets/files/{action_name}/{feature_name}_{level}.npz',
             'features_path':     	'/cs/vml2/mkhodaba/datasets/VSB100/files/{action_name}/{feature_name}_{level}.npz',
+            'adjacency_path':     	'/cs/vml2/mkhodaba/datasets/VSB100/files/{action_name}/adjacency_{level}.npz',
             'output_path':    		self.experiments_path + 'indices.mat',#+frame_format
             'pickle_path':            '/cs/vml2/mkhodaba/datasets/VSB100/files/{action_name}/{level:02d}.p',
             'database_path':        self.experiments_path+'/{level:02d}.h5',

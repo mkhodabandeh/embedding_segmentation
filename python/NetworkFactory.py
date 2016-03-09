@@ -46,7 +46,7 @@ class Network:
     		setattr(self.net, 'neighbor{0}'.format(l-1), dataLayer[l])
 
     	#First layer of inner product
-        layer_output = 1000
+        layer_output = 1024 
     	self.net.inner_product_target_1 = self.getInnerProduct('target', 'inner_product_target_1', 2, num_output=layer_output)
     	self.net.inner_product_negative_1 = self.getInnerProduct('negative', 'inner_product_negative_1', 2, num_output=layer_output)
     	for i in range(0, self.number_of_neighbors):

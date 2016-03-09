@@ -17,7 +17,6 @@ class FeatureType(Enum):
     CLR_HOF = 5
     HOF = 6
     FCN = 7
-    CLR = 8
     #DEEP = 3
 
 class Segmentation(object):
@@ -54,7 +53,7 @@ class Segmentation(object):
     #TODO: implement this for faster pickleing
 #    def __reduce__(self, path):
 #        pass
-
+    
     def deleteData(self):
         del self.frame_to_voxels
         del self.__cKDTree__
@@ -125,13 +124,16 @@ class Segmentation(object):
 
     def addSupervoxels(self, original_img_path, segmented_img_path, frame_number, optical_flow_path=None, fcn_path=None):
         self.in_process = True
-        frame_number = frame_number-1
         orig_img = MyImage(original_img_path)
         img = MyImage(segmented_img_path)
+        try:
+            next_img = MyImage(self.segmented_path.format(frame_number+1))
+        except:
+            next_img = None
+        frame_number = frame_number-1
         voxel_colors = img.getcolors()
         if optical_flow_path is not None:
             optical_flow_img = MyImage(optical_flow_path)
-            # optical_flow_img =  
         if fcn_path is not None:
             fcn_file = np.load(fcn_path)['hsv'].transpose(1, 2, 0).astype('float32')
         #print "Colors"
@@ -148,8 +150,13 @@ class Segmentation(object):
             labels = self.annotator.labels
         except:
             pass
+        same_frame_moves = ((0, 1), (1, -1), (1, 0), (1, 1))  # (dh, dw)
+        next_frame_moves = ((-1,-1), (0,-1), (1,-1), (-1, 0), (0,0), (1,0), (-1,1), (0,1),(1,1)) # (dh, dw)
+        width, height = img.size
+        print 'height:', height, '  width:', width
         for x in range(img.size[0]):
             for y in range(img.size[1]):
+                w,h = x,y
                 color = img.getpixel(x, y)
                 try:
                     self.supervoxels[color].addVoxel(x, y, frame_number, orig_img.getpixel(x, y), labels[y][x][frame_number])
@@ -161,6 +168,38 @@ class Segmentation(object):
                 if optical_flow_path is not None:
                     flow = optical_flow_img.getpixel(x,y)
                     self.supervoxels[color].addOpticalFlow(flow)
+                #process current frame
+                for move in same_frame_moves:
+                    nh,nw = h+move[0], w+move[1]
+                    if  0 <= nh < height and 0 <= nw < width:
+                        next_color = img.getpixel(nw, nh)
+                        if color != next_color:
+                            try:
+                                self.supervoxels[color].adjacent[next_color] += 1
+                            except:
+                                self.supervoxels[color].adjacent[next_color] = 1
+                            # try:
+                                # self.supervoxels[next_color].adjacent[color] += 1
+                            # except:
+                                # self.supervoxels[next_color].adjacent[color] = 1
+                            # next_id = colors_to_id[next_clr]-1
+                            # adjacency[cur_id][next_id] += 1
+                            # adjacency[next_id][cur_id] = adjacency[cur_id][next_id]
+                #Then process next frame adjacents
+                if next_img:
+                    for move in next_frame_moves:
+                        nh,nw = h+move[0], w+move[1]
+                        if  0 <= nh < height and 0 <= nw < width:
+                            next_color = next_img.getpixel(nw, nh)
+                            if color != next_color:
+                                try:
+                                    self.supervoxels[color].adjacent[next_color] += 1
+                                except:
+                                    self.supervoxels[color].adjacent[next_color] = 1
+                                # try:
+                                    # self.supervoxels[next_color].adjacent[color] += 1
+                                # except:
+                                    # self.supervoxels[next_color].adjacent[color] = 1
 
         #            print x,y,frame_number
         #            raise
@@ -231,11 +270,74 @@ class Segmentation(object):
         self.supervoxels_list_corso = [x for (y, x) in sorted(zip(ids, self.supervoxels_list))]
         self.supervoxels_list.sort(key=lambda sp: sp.overlap_count, reverse=True) #Sort supervoxels_list based of the overlap amount Largest to Lowest
         self.in_process = False
-        self.createVoxelLabelledlevelvideoData()
+        labelledlevelvideo = self.createVoxelLabelledlevelvideoData()
+        self.createAdjacencyMatrixPar()
+        # self.createAdjacencyMatrix(labelledlevelvideo)
+
+    def createAdjacencyMatrixPar(self):
+        colors_to_id = self.colors_to_id
+        n = len(self.supervoxels_list)
+        adjacency = np.zeros((n, n))
+        for i in xrange(n):
+            for j in xrange(n):
+                svi = self.supervoxels_list[i]
+                svj = self.supervoxels_list[j]
+                adjcount_i = svi.adjacent.get(svj.ID, 0)
+                adjcount_j = svj.adjacent.get(svi.ID, 0)
+                adjacency[i][j] = adjcount_i + adjcount_j
+        for i in xrange(n):
+            for j in xrange(i+1, n):
+                a,b = adjacency[i][j], adjacency[j][i]
+                adjacency[i][j] = adjacency[j][i] = a+b
+        np.savez(self.adjacency_path, adjacency=adjacency)    
+
+
+    def createAdjacencyMatrix(self, labelledlevelvideo):
+        print "[Segmentation:: createAdjacencyMatrix]  creating adjacency matrix"
+        colors_to_id = self.colors_to_id
+        same_frame_moves = ((0, 1), (1, -1), (1, 0), (1, 1))  # (dh, dw)
+        next_frame_moves = ((-1,-1), (0,-1), (1,-1), (-1, 0), (0,0), (1,0), (-1,1), (0,1),(1,1)) # (dh, dw)
+        n = len(self.supervoxels_list)
+        adjacency = np.zeros((n, n))
+        height, width, frames = labelledlevelvideo.shape
+        #Just tasting the sizes
+        testimg = MyImage(self.segmented_path.format(1))
+        testimg.getpixel(width-1, height-1)
+        #labelledlevelvideo -> h,w,f
+        for f in xrange(self.current_frame):
+            print '[Segmentation:: createAdjacencyMatrix]  processing frame', f
+            cur_img = MyImage(self.segmented_path.format(f+1))
+            if f < frames-1: 
+                next_img = MyImage(self.segmented_path.format(f+2))
+            for h in xrange(height):
+                for w in xrange(width):
+                    #First process current frame adjacents
+                    cur_clr = cur_img.getpixel(w,h)
+                    cur_id = colors_to_id[cur_clr]-1
+                    for move in same_frame_moves:
+                        nh,nw = h+move[0], w+move[1]
+                        if  0 <= nh < height and 0 <= nw < width:
+                            next_clr = cur_img.getpixel(nw, nh)
+                            if cur_clr != next_clr:
+                                next_id = colors_to_id[next_clr]-1
+                                adjacency[cur_id][next_id] += 1
+                                adjacency[next_id][cur_id] = adjacency[cur_id][next_id]
+                    #Then process next frame adjacents
+                    if f != frames-1:
+                        for move in next_frame_moves:
+                            nh,nw = h+move[0], w+move[1]
+                            if  0 <= nh < height and 0 <= nw < width:
+                                next_clr = next_img.getpixel(nw, nh)
+                                if cur_clr != next_clr:
+                                    next_id = colors_to_id[next_clr]-1
+                                    adjacency[cur_id][next_id] += 1
+                                    adjacency[next_id][cur_id] = adjacency[cur_id][next_id]
+        np.savez(self.adjacency_path, adjacency=adjacency)    
+
 
     def createVoxelLabelledlevelvideoData(self):
         #TODO:
-        # self.current_frame = 2
+        # self.current_frame = 22
         print "[Segmentation::VoxelLabelledlevelvideoData]  self.current_frame = {}".format(self.current_frame)
         segmented_path = self.segmented_path.format(self.current_frame-1)
         orig_img = MyImage(segmented_path)
@@ -253,7 +355,10 @@ class Segmentation(object):
                     mapped[h][w][f]= self.colors_to_id[img.getpixel(w,h)]
         from scipy.io import savemat
         labelledlevelvideo = mapped
+        import os
+        os.system('mkdir -p '+os.path.abspath(os.path.join(self.labelledlevelvideo_path, os.pardir)))
         savemat(self.labelledlevelvideo_path, {'labelledlevelvideo':labelledlevelvideo, 'total_number_of_supervoxels':len(self.colors_to_id)})
+        return labelledlevelvideo
 
     def getSupervoxelAt(self, x, y, t):
         pixel = (x,y)
@@ -468,8 +573,8 @@ class MySegmentation(Segmentation):
             #TODO: Implement Hard negatives. Maybe among neighbors of the neighbors?
             # Or maybe ask for K+n neighbors and the last n ones could be candidate for hard negatives
             #negatives = random.sample(supervoxels, negative_numbers) #Sample one supervoxel as negative
-            #negatives = random.sample(neighbors_, negative_numbers) #Sample one supervoxel as negative
-            negatives = neighbors_[:negative_numbers]
+            negatives = random.sample(neighbors_, negative_numbers) #Sample one supervoxel as negative
+
             #neighbors.remove(sv)
 
             #when everything is done we put back neighbors to the set
@@ -496,11 +601,6 @@ class MySegmentation(Segmentation):
 
     def _extract_fcn_hof(self, k, negative_numbers):
         assert k >= 2, 'K < 2: At least 2 neighbors is needed'
-        #self.features -> dictionary {'FCN': np.arary, 'HOF':np.array}
-        #self.centers
-
-        #self.getKNearestSupervoxelsOf_indices( int i, int k)
-        #i -> index of supervoxel
         supervoxels = set(self.supervoxels_list)
         # feature_len = len(self.supervoxels_list[0].getFCN() + self.supervoxels_list[0].getOpticalFlow())
         feature_len = self.supervoxels_list[0].getFCN().shape[1] + self.supervoxels_list[0].getOpticalFlow().shape[1]
@@ -539,10 +639,10 @@ class MySegmentation(Segmentation):
                 new_idx = idx+neg
                 data['target'][new_idx][...] = data['target'][idx][...]
                 for j, nei in enumerate(neighbors):
-                    data['neighbor{0}'.format(j)][new_idx][...] = data['neighbor{0}'.format(j)][idx][...]
+                    data['neighbor{0}'.format(j)][new_idx][...] = data['neighbor{0}'.format(j)][idx][...] 
                 data['negative'][new_idx][...] = np.concatenate((self._scale(negatives[neg].getFCN()), negatives[neg].getOpticalFlow()), axis=1)
         from scipy.io import savemat
-        print self.output_path
+        print self.output_path 
         savemat(self.output_path, {'database_negative_indices':database_negative_indices, 'database_neighbor_indices':database_neighbor_indices})
         print "[Segmentation::_extract_fcn_hof] -- data['target'] shape:", data['target'].shape
         #return [data, [len(self.supervoxels_list[0].getFCN()), len(self.supervoxels_list[0].getOpticalFlow())]]

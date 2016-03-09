@@ -27,6 +27,7 @@ parser.add_option('-F', '--features', dest='F', default=None, help='feature type
 parser.add_option('-m', '--model', dest='m', action="store_true", default=False)
 parser.add_option('-l', '--level', dest='l', default=None)
 parser.add_option('-L', '--baselr', dest='L', default=None)
+parser.add_option('-B', '--bagsize', dest='B', default=None, type="int")
 (options, args) = parser.parse_args()
 
 
@@ -125,7 +126,7 @@ if __name__=='__main__':
 
     model = {'net': options.n, 'batch_size': options.b, 'number_of_neighbors': options.a, \
         'number_of_negatives': options.A, 'inner_product_output': options.o, \
-        'feature_type': options.F}
+        'feature_type': options.F, 'negative_selector_param':options.B}
 
     db_args = {'level': options.l}
 

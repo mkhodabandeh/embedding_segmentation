@@ -20,6 +20,7 @@ parser.add_option('-o', '--innerprod', dest='o', default=None)
 parser.add_option('-F', '--features', dest='F', default=None, help='feature type')
 parser.add_option('-l', '--level', dest='l', default=None)
 parser.add_option('-L', '--baselr', dest='L', default=None)
+parser.add_option('-B', '--bagsize', dest='B', default=None)
 ###Features need to be like this: FCN_HOF...
 
 (options, args) = parser.parse_args()

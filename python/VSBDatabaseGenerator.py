@@ -24,6 +24,8 @@ def createVSB100Database(data, db_settings, logger):
     centers = data['centers']
     level = int(db_settings['level'])
     output_path = db_settings['output_path']
+    action_name = db_settings['action_name'][0]
+    adjacency_path = db_settings['adjacency_path'].format(action_name=action_name, level=level)
     database_path = db_settings['database_path'].format(level=level)
     negative_selector_method = db_settings['negative_selector_method']
     negative_selector_param = db_settings['negative_selector_param']
@@ -31,17 +33,37 @@ def createVSB100Database(data, db_settings, logger):
     features = [data[x.name] for x in db_settings['feature_type']]
     assert colors.shape[0] == features[0].shape[0], 'Feature dimensions mismatch %s != %s' % (colors.shape[0],  features[0].shape[0])
     features = np.concatenate(features, axis=1)
-    #TODO: if voxel_labels is not there produce it
-    #TODO: if pixel_labels is not there produce it
     basic_similarities = data['HOF'].dot(data['HOF'].T)
     # basic_similarities = features.dot(features.T)
     number_of_voxels = colors.shape[0]
     n = number_of_voxels * negative_numbers
     database_negative_indices = np.zeros((number_of_voxels, negative_numbers), dtype=np.int32)
     database_neighbor_indices = np.zeros((number_of_voxels, k), dtype=np.int32)
+    adjacency = np.load(adjacency_path)['adjacency']
     kdtree = cKDTree(centers.tolist())
+    # from IPython.core.debugger import Tracer 
     for i in xrange(number_of_voxels):
         if 1 == 1:
+            neighbors_all_kdt = kdtree.query(centers[i], 100)[1][1:]
+            weights = adjacency[i][:] 
+            arg_weights = np.argsort(np.array(weights)).tolist()
+            # Tracer()()
+            # neighbors_all = neighbors_all[arg_weights][::-1]
+            neighbors_all = arg_weights[::-1]
+            weights = weights[arg_weights][::-1]
+            zero = np.where(weights == 0)
+            zero = zero[0][0]
+            if i == 0:
+                print 'first sp, first zero:', zero
+            if zero <= k + negative_numbers:
+                print 'shit happens'
+                neighbors_all = kdtree.query(centers[i], 30)[1][1:]
+                neighbors = neighbors_all[:k]
+                negatives = getNegatives(negative_selector_method, negative_selector_param, neighbors_all, negative_numbers, k)
+            else:
+                neighbors = neighbors_all[:k]
+                negatives = neighbors_all[zero-negative_numbers:zero]
+        elif 1 == 2:
             neighbors_all = kdtree.query(centers[i], 40)[1][1:]
             weights = basic_similarities[i, neighbors_all]
             arg_weights = np.argsort(np.array(weights)).tolist()
@@ -62,11 +84,16 @@ def createVSB100Database(data, db_settings, logger):
     database['target'] = np.tile(features, (negative_numbers, 1))
     # database.close()
     print 'target done'
+    print 'neighbors_num', k
     for nei in xrange(k):
         # database = h5py.File(database_path, 'r+')
-        neighbor_features = features[database_neighbor_indices[:,nei]][...]
-        database['neighbor{}'.format(nei)] = np.tile(neighbor_features, (negative_numbers, 1))
-        print 'neighbor{} done'.format(nei)
+        try:
+            neighbor_features = features[database_neighbor_indices[:,nei]][...]
+            database['neighbor{}'.format(nei)] = np.tile(neighbor_features, (negative_numbers, 1))
+            print 'neighbor{} done'.format(nei)
+        except:
+            from IPython.core.debugger import Tracer
+            Tracer()()
         # database.close()
 
     # database = h5py.File(database_path, 'r+')
@@ -108,7 +135,6 @@ def createVoxelLabelledlevelvideoData(db_settings, colors):
     from scipy.io import savemat
     labelledlevelvideo = mapped
     savemat(labelledlevelvideo_path, {'labelledlevelvideo':labelledlevelvideo, 'total_number_of_supervoxels':len(colors_to_id)})
-
 
 # def labelledlevelvideo_generator(conf):
     # segmented_path = conf.getPath('segmented_path')
